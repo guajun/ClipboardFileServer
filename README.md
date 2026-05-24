@@ -150,6 +150,25 @@ https://guajun.github.io/ClipboardFileServer/
 https://guajun.github.io/ClipboardFileServer/
 ```
 
+Linux、Termux、macOS：
+
+```sh
+curl -fsSL https://guajun.github.io/ClipboardFileServer/install.sh | sh
+```
+
+Windows PowerShell：
+
+```powershell
+& ([scriptblock]::Create((Invoke-RestMethod 'https://guajun.github.io/ClipboardFileServer/install.ps1')))
+```
+
+安装脚本会自动识别系统和架构。当前支持：
+
+- Windows amd64 / arm64
+- Linux amd64 / arm64
+- Termux arm64
+- macOS amd64 / arm64
+
 如果你有自己的 HTTP 服务器，也可以把下面文件放到同一个目录，例如 `https://your-server/clipboard/`：
 
 - `dist/index.html`
@@ -157,25 +176,25 @@ https://guajun.github.io/ClipboardFileServer/
 - `dist/install.ps1`
 - `dist/` 里的目标平台二进制
 
-Linux amd64：
+然后用自托管地址安装：
+
+```sh
+curl -fsSL https://your-server/clipboard/install.sh | sh -s -- https://your-server/clipboard/
+```
+
+PowerShell：
+
+```powershell
+& ([scriptblock]::Create((Invoke-RestMethod 'https://your-server/clipboard/install.ps1'))) -BaseUrl 'https://your-server/clipboard/'
+```
+
+也可以手动指定某个二进制 URL：
 
 ```sh
 curl -fsSL https://guajun.github.io/ClipboardFileServer/install.sh | sh -s -- https://guajun.github.io/ClipboardFileServer/clip-server_linux_amd64
 ```
 
-Termux 或 Linux arm64：
-
-```sh
-curl -fsSL https://guajun.github.io/ClipboardFileServer/install.sh | sh -s -- https://guajun.github.io/ClipboardFileServer/clip-server_linux_arm64
-```
-
-macOS Apple Silicon：
-
-```sh
-curl -fsSL https://guajun.github.io/ClipboardFileServer/install.sh | sh -s -- https://guajun.github.io/ClipboardFileServer/clip-server_darwin_arm64
-```
-
-Windows PowerShell：
+PowerShell：
 
 ```powershell
 & ([scriptblock]::Create((Invoke-RestMethod 'https://guajun.github.io/ClipboardFileServer/install.ps1'))) -BinaryUrl 'https://guajun.github.io/ClipboardFileServer/clip-server_windows_amd64.exe'

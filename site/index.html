@@ -265,6 +265,11 @@
       overflow-wrap: anywhere;
     }
 
+    .support-text {
+      margin-top: 10px;
+      font-size: 0.92rem;
+    }
+
     .toast {
       position: fixed;
       right: 18px;
@@ -369,6 +374,7 @@
           <button type="button" id="copyCommandButton">复制命令</button>
         </div>
         <pre id="installCommand"></pre>
+        <p class="muted support-text">安装脚本会自动识别系统和架构；支持 Windows、Linux、Termux、macOS 的 amd64/arm64。</p>
       </div>
     </section>
 
@@ -539,9 +545,9 @@
     function installCommand(artifact, url) {
       const root = baseUrl();
       if (artifact.platform === 'windows') {
-        return `& ([scriptblock]::Create((Invoke-RestMethod '${joinUrl(root, 'install.ps1')}'))) -BinaryUrl '${url}'`;
+        return `& ([scriptblock]::Create((Invoke-RestMethod '${joinUrl(root, 'install.ps1')}')))`;
       }
-      return `curl -fsSL ${joinUrl(root, 'install.sh')} | sh -s -- ${url}`;
+      return `curl -fsSL ${joinUrl(root, 'install.sh')} | sh`;
     }
 
     function labelFor(platform, arch) {
