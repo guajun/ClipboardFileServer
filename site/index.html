@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ClipboardFileServer 下载</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f6f7;
+      --panel: #ffffff;
+      --text: #202624;
+      --muted: #66716d;
+      --line: #d9dfdc;
+      --accent: #2d6a4f;
+      --accent-strong: #1f513c;
+      --warn: #a66b1f;
+      --danger: #b34332;
+      --shadow: 0 12px 32px rgba(24, 32, 28, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-height: 100%;
+    }
+
+    body {
+      min-height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    button,
+    .button {
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--text);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 12px;
+      font: inherit;
+      font-weight: 650;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    button:hover,
+    .button:hover {
+      border-color: var(--accent);
+      color: var(--accent-strong);
+    }
+
+    button.primary,
+    .button.primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+
+    button.primary:hover,
+    .button.primary:hover {
+      background: var(--accent-strong);
+      color: #fff;
+    }
+
+    button:focus-visible,
+    .button:focus-visible,
+    select:focus,
+    input:focus {
+      outline: 3px solid rgba(45, 106, 79, 0.22);
+      outline-offset: 2px;
+    }
+
+    .shell {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 44px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: clamp(1.7rem, 3vw, 2.5rem);
+      line-height: 1.12;
+      font-weight: 780;
+    }
+
+    h2 {
+      font-size: 1.05rem;
+      font-weight: 760;
+    }
+
+    h3 {
+      font-size: 1rem;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .version {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      padding: 7px 12px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .download-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .selector-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 14px 0;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    select,
+    input {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fbfcfc;
+      color: var(--text);
+      padding: 8px 10px;
+      font: inherit;
+    }
+
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .command-box {
+      display: grid;
+      gap: 8px;
+    }
+
+    .command-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    pre {
+      margin: 0;
+      max-height: 220px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #f8faf9;
+      padding: 12px;
+      color: #1c2521;
+      font: 0.92rem/1.55 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .artifact {
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--accent);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .artifact.windows {
+      border-left-color: var(--warn);
+    }
+
+    .artifact .meta {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .deploy-list {
+      display: grid;
+      gap: 8px;
+      margin: 12px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .deploy-list li {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fbfcfc;
+      padding: 9px 10px;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-size: 0.92rem;
+      overflow-wrap: anywhere;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      max-width: min(360px, calc(100vw - 36px));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #202624;
+      color: #fff;
+      padding: 10px 14px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    .toast.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 860px) {
+      .download-panel,
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        align-items: start;
+        flex-direction: column;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .shell {
+        width: min(100% - 20px, 1120px);
+        padding-top: 16px;
+      }
+
+      .selector-grid,
+      .action-row,
+      .command-head {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <h1>ClipboardFileServer 下载</h1>
+        <p class="muted">单文件剪贴板与文件服务器，下载后即可在局域网内启动。</p>
+      </div>
+      <span class="version" id="versionBadge">v0.1.0</span>
+    </header>
+
+    <section class="panel download-panel">
+      <div>
+        <h2>推荐下载</h2>
+        <p class="muted" id="detectedText">正在识别当前系统</p>
+        <div class="selector-grid">
+          <label>
+            系统
+            <select id="platformSelect">
+              <option value="windows">Windows</option>
+              <option value="linux">Linux / Termux</option>
+              <option value="darwin">macOS</option>
+            </select>
+          </label>
+          <label>
+            架构
+            <select id="archSelect">
+              <option value="amd64">amd64 / x64</option>
+              <option value="arm64">arm64 / aarch64</option>
+            </select>
+          </label>
+        </div>
+        <label>
+          文件所在目录 URL
+          <input id="baseUrlInput" type="url" spellcheck="false">
+        </label>
+        <div class="action-row">
+          <a class="button primary" id="downloadLink" href="#" download>下载二进制</a>
+          <button type="button" id="copyBinaryUrlButton">复制下载地址</button>
+        </div>
+      </div>
+
+      <div class="command-box">
+        <div class="command-head">
+          <h2>一行安装</h2>
+          <button type="button" id="copyCommandButton">复制命令</button>
+        </div>
+        <pre id="installCommand"></pre>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>全部文件</h2>
+      <p class="muted">页面、安装脚本和二进制文件放在同一个静态目录即可。</p>
+      <div class="grid" id="artifactGrid"></div>
+    </section>
+
+    <section class="panel">
+      <h2>服务器目录</h2>
+      <p class="muted">上传到静态服务器时，建议目录内容保持这样：</p>
+      <ul class="deploy-list">
+        <li>index.html</li>
+        <li>install.sh</li>
+        <li>install.ps1</li>
+        <li>clip-server_linux_amd64</li>
+        <li>clip-server_linux_arm64</li>
+        <li>clip-server_darwin_amd64</li>
+        <li>clip-server_darwin_arm64</li>
+        <li>clip-server_windows_amd64.exe</li>
+        <li>clip-server_windows_arm64.exe</li>
+      </ul>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const releaseVersion = '0.1.0';
+    const artifacts = [
+      { platform: 'windows', arch: 'amd64', file: 'clip-server_windows_amd64.exe', label: 'Windows amd64', note: '常见 Windows x64 电脑' },
+      { platform: 'windows', arch: 'arm64', file: 'clip-server_windows_arm64.exe', label: 'Windows arm64', note: 'Windows on ARM 设备' },
+      { platform: 'linux', arch: 'amd64', file: 'clip-server_linux_amd64', label: 'Linux amd64', note: 'x86_64 Linux 服务器或桌面' },
+      { platform: 'linux', arch: 'arm64', file: 'clip-server_linux_arm64', label: 'Linux / Termux arm64', note: 'aarch64 Linux 或 Android Termux' },
+      { platform: 'darwin', arch: 'amd64', file: 'clip-server_darwin_amd64', label: 'macOS Intel', note: 'Intel Mac' },
+      { platform: 'darwin', arch: 'arm64', file: 'clip-server_darwin_arm64', label: 'macOS Apple Silicon', note: 'M 系列 Mac' },
+    ];
+
+    const elements = {
+      versionBadge: document.querySelector('#versionBadge'),
+      detectedText: document.querySelector('#detectedText'),
+      platformSelect: document.querySelector('#platformSelect'),
+      archSelect: document.querySelector('#archSelect'),
+      baseUrlInput: document.querySelector('#baseUrlInput'),
+      downloadLink: document.querySelector('#downloadLink'),
+      copyBinaryUrlButton: document.querySelector('#copyBinaryUrlButton'),
+      copyCommandButton: document.querySelector('#copyCommandButton'),
+      installCommand: document.querySelector('#installCommand'),
+      artifactGrid: document.querySelector('#artifactGrid'),
+      toast: document.querySelector('#toast'),
+    };
+
+    let toastTimer = 0;
+
+    init();
+
+    async function init() {
+      elements.versionBadge.textContent = `v${releaseVersion}`;
+      elements.baseUrlInput.value = defaultBaseUrl();
+
+      const detected = await detectRuntime();
+      elements.platformSelect.value = detected.platform;
+      elements.archSelect.value = detected.arch;
+      elements.detectedText.textContent = `当前推荐：${labelFor(detected.platform, detected.arch)}`;
+
+      elements.platformSelect.addEventListener('change', render);
+      elements.archSelect.addEventListener('change', render);
+      elements.baseUrlInput.addEventListener('input', render);
+      elements.copyBinaryUrlButton.addEventListener('click', () => copyText(binaryUrl()));
+      elements.copyCommandButton.addEventListener('click', () => copyText(elements.installCommand.textContent));
+
+      renderArtifacts();
+      render();
+    }
+
+    async function detectRuntime() {
+      const platformText = `${navigator.userAgentData?.platform || ''} ${navigator.platform || ''} ${navigator.userAgent || ''}`.toLowerCase();
+      let platform = 'linux';
+      if (platformText.includes('win')) {
+        platform = 'windows';
+      } else if (platformText.includes('mac')) {
+        platform = 'darwin';
+      } else if (platformText.includes('android')) {
+        platform = 'linux';
+      }
+
+      let arch = platformText.includes('arm') || platformText.includes('aarch64') ? 'arm64' : 'amd64';
+      if (navigator.userAgentData?.getHighEntropyValues) {
+        try {
+          const values = await navigator.userAgentData.getHighEntropyValues(['architecture']);
+          const architecture = String(values.architecture || '').toLowerCase();
+          if (architecture.includes('arm')) {
+            arch = 'arm64';
+          } else if (architecture.includes('x86')) {
+            arch = 'amd64';
+          }
+        } catch (_error) {
+        }
+      }
+      return { platform, arch };
+    }
+
+    function defaultBaseUrl() {
+      if (window.location.protocol === 'file:') {
+        return 'https://your-server/clipboard/';
+      }
+      return new URL('.', window.location.href).href;
+    }
+
+    function render() {
+      const selected = selectedArtifact();
+      const url = binaryUrl();
+      elements.downloadLink.href = url;
+      elements.downloadLink.download = selected.file;
+      elements.downloadLink.textContent = `下载 ${selected.label}`;
+      elements.installCommand.textContent = installCommand(selected, url);
+    }
+
+    function renderArtifacts() {
+      elements.artifactGrid.replaceChildren(...artifacts.map((artifact) => {
+        const card = document.createElement('article');
+        card.className = `artifact ${artifact.platform}`;
+
+        const title = document.createElement('h3');
+        title.textContent = artifact.label;
+        const meta = document.createElement('p');
+        meta.className = 'meta';
+        meta.textContent = artifact.note;
+        const link = document.createElement('a');
+        link.className = 'button';
+        link.href = joinUrl(baseUrl(), artifact.file);
+        link.download = artifact.file;
+        link.textContent = artifact.file;
+
+        card.append(title, meta, link);
+        return card;
+      }));
+    }
+
+    function selectedArtifact() {
+      const platform = elements.platformSelect.value;
+      const arch = elements.archSelect.value;
+      return artifacts.find((artifact) => artifact.platform === platform && artifact.arch === arch) || artifacts[0];
+    }
+
+    function binaryUrl() {
+      return joinUrl(baseUrl(), selectedArtifact().file);
+    }
+
+    function baseUrl() {
+      const value = elements.baseUrlInput.value.trim() || 'https://your-server/clipboard/';
+      return value.endsWith('/') ? value : `${value}/`;
+    }
+
+    function joinUrl(root, file) {
+      return new URL(file, root).href;
+    }
+
+    function installCommand(artifact, url) {
+      const root = baseUrl();
+      if (artifact.platform === 'windows') {
+        return `& ([scriptblock]::Create((Invoke-RestMethod '${joinUrl(root, 'install.ps1')}'))) -BinaryUrl '${url}'`;
+      }
+      return `curl -fsSL ${joinUrl(root, 'install.sh')} | sh -s -- ${url}`;
+    }
+
+    function labelFor(platform, arch) {
+      const artifact = artifacts.find((item) => item.platform === platform && item.arch === arch);
+      return artifact ? artifact.label : 'Linux amd64';
+    }
+
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast('已复制');
+      } catch (_error) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.append(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        textarea.remove();
+        showToast('已复制');
+      }
+    }
+
+    function showToast(message) {
+      elements.toast.textContent = message;
+      elements.toast.classList.add('is-visible');
+      window.clearTimeout(toastTimer);
+      toastTimer = window.setTimeout(() => elements.toast.classList.remove('is-visible'), 2200);
+    }
+  </script>
+</body>
+</html>
