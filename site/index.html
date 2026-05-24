@@ -139,6 +139,14 @@
       white-space: nowrap;
     }
 
+    .top-links {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
     .panel {
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -289,6 +297,10 @@
         align-items: start;
         flex-direction: column;
       }
+
+      .top-links {
+        justify-content: flex-start;
+      }
     }
 
     @media (max-width: 560px) {
@@ -314,7 +326,10 @@
         <h1>ClipboardFileServer 下载</h1>
         <p class="muted">单文件剪贴板与文件服务器，下载后即可在局域网内启动。</p>
       </div>
-      <span class="version" id="versionBadge">v0.1.0</span>
+      <div class="top-links">
+        <a class="button" href="https://github.com/guajun/ClipboardFileServer">源码仓库</a>
+        <span class="version" id="versionBadge">v0.1.0</span>
+      </div>
     </header>
 
     <section class="panel download-panel">
@@ -384,6 +399,7 @@
 
   <script>
     const releaseVersion = '0.1.0';
+    const hostedBaseUrl = 'https://guajun.github.io/ClipboardFileServer/';
     const artifacts = [
       { platform: 'windows', arch: 'amd64', file: 'clip-server_windows_amd64.exe', label: 'Windows amd64', note: '常见 Windows x64 电脑' },
       { platform: 'windows', arch: 'arm64', file: 'clip-server_windows_arm64.exe', label: 'Windows arm64', note: 'Windows on ARM 设备' },
@@ -459,7 +475,7 @@
 
     function defaultBaseUrl() {
       if (window.location.protocol === 'file:') {
-        return 'https://your-server/clipboard/';
+        return hostedBaseUrl;
       }
       return new URL('.', window.location.href).href;
     }
@@ -505,7 +521,7 @@
     }
 
     function baseUrl() {
-      const value = elements.baseUrlInput.value.trim() || 'https://your-server/clipboard/';
+      const value = elements.baseUrlInput.value.trim() || hostedBaseUrl;
       return value.endsWith('/') ? value : `${value}/`;
     }
 

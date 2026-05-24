@@ -4,6 +4,8 @@
 
 服务端是无第三方依赖的 Go 程序，前端文件会被内嵌进二进制。分发时只需要一个 `clip-server` 可执行文件，不需要 Node.js、npm 或 clone 仓库。
 
+下载页：<https://guajun.github.io/ClipboardFileServer/>
+
 ## 使用
 
 如果已经拿到对应平台的二进制：
@@ -134,9 +136,21 @@ clip-server_windows_arm64.exe
 
 其中 `index.html` 是静态下载页，可以和二进制、安装脚本一起直接上传到你的 HTTP 服务器目录。
 
+仓库 push 到 `master` 后，GitHub Actions 会自动构建 `dist/` 并部署到 GitHub Pages：
+
+```text
+https://guajun.github.io/ClipboardFileServer/
+```
+
 ## 一行安装
 
-如果你有自己的 HTTP 服务器，可以把下面文件放到同一个目录，例如 `https://your-server/clipboard/`：
+推荐直接使用项目下载页：
+
+```text
+https://guajun.github.io/ClipboardFileServer/
+```
+
+如果你有自己的 HTTP 服务器，也可以把下面文件放到同一个目录，例如 `https://your-server/clipboard/`：
 
 - `dist/index.html`
 - `dist/install.sh`
@@ -146,25 +160,25 @@ clip-server_windows_arm64.exe
 Linux amd64：
 
 ```sh
-curl -fsSL https://your-server/clipboard/install.sh | sh -s -- https://your-server/clipboard/clip-server_linux_amd64
+curl -fsSL https://guajun.github.io/ClipboardFileServer/install.sh | sh -s -- https://guajun.github.io/ClipboardFileServer/clip-server_linux_amd64
 ```
 
 Termux 或 Linux arm64：
 
 ```sh
-curl -fsSL https://your-server/clipboard/install.sh | sh -s -- https://your-server/clipboard/clip-server_linux_arm64
+curl -fsSL https://guajun.github.io/ClipboardFileServer/install.sh | sh -s -- https://guajun.github.io/ClipboardFileServer/clip-server_linux_arm64
 ```
 
 macOS Apple Silicon：
 
 ```sh
-curl -fsSL https://your-server/clipboard/install.sh | sh -s -- https://your-server/clipboard/clip-server_darwin_arm64
+curl -fsSL https://guajun.github.io/ClipboardFileServer/install.sh | sh -s -- https://guajun.github.io/ClipboardFileServer/clip-server_darwin_arm64
 ```
 
 Windows PowerShell：
 
 ```powershell
-& ([scriptblock]::Create((Invoke-RestMethod 'https://your-server/clipboard/install.ps1'))) -BinaryUrl 'https://your-server/clipboard/clip-server_windows_amd64.exe'
+& ([scriptblock]::Create((Invoke-RestMethod 'https://guajun.github.io/ClipboardFileServer/install.ps1'))) -BinaryUrl 'https://guajun.github.io/ClipboardFileServer/clip-server_windows_amd64.exe'
 ```
 
 安装完成后，所有平台都用同一个启动命令：

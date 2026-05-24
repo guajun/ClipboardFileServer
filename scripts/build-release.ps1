@@ -27,7 +27,9 @@ foreach ($target in $targets) {
   }
 }
 
-Copy-Item -Path "site\index.html" -Destination (Join-Path $OutDir "index.html") -Force
+$indexHtml = Get-Content -Raw -Path "site\index.html"
+$indexHtml = $indexHtml.Replace("const releaseVersion = '0.1.0';", "const releaseVersion = '$Version';")
+Set-Content -Path (Join-Path $OutDir "index.html") -Value $indexHtml -NoNewline
 Copy-Item -Path "scripts\install.sh" -Destination (Join-Path $OutDir "install.sh") -Force
 Copy-Item -Path "scripts\install.ps1" -Destination (Join-Path $OutDir "install.ps1") -Force
 

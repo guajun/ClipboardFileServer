@@ -21,7 +21,7 @@ build_target darwin arm64 ""
 build_target windows amd64 ".exe"
 build_target windows arm64 ".exe"
 
-cp site/index.html "$out_dir/index.html"
+sed "s/const releaseVersion = '0.1.0';/const releaseVersion = '$version';/" site/index.html >"$out_dir/index.html"
 cp scripts/install.sh "$out_dir/install.sh"
 cp scripts/install.ps1 "$out_dir/install.ps1"
 chmod 755 "$out_dir/install.sh"
