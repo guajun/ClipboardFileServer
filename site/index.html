@@ -428,7 +428,7 @@
     init();
 
     async function init() {
-      elements.versionBadge.textContent = `v${releaseVersion}`;
+      elements.versionBadge.textContent = formatVersionBadge(releaseVersion);
       elements.baseUrlInput.value = defaultBaseUrl();
 
       const detected = await detectRuntime();
@@ -478,6 +478,13 @@
         return hostedBaseUrl;
       }
       return new URL('.', window.location.href).href;
+    }
+
+    function formatVersionBadge(version) {
+      if (/^v?\d+\.\d+\.\d+/.test(version)) {
+        return version.startsWith('v') ? version : `v${version}`;
+      }
+      return version;
     }
 
     function render() {
