@@ -2,6 +2,8 @@ const state = {
   items: [],
   filter: '',
   token: readToken(),
+  sync: null,
+  reloadTimer: 0,
 };
 
 const elements = {
@@ -43,6 +45,7 @@ function init() {
 
   window.addEventListener('paste', handlePaste);
   loadItems();
+  connectSync();
 }
 
 function readToken() {
@@ -147,12 +150,40 @@ async function loadItems() {
   try {
     const response = await api('/api/items');
     state.items = await response.json();
-    elements.serverState.textContent = '已连接';
+    if (!state.sync || state.sync.readyState !== EventSource.OPEN) {
+      elements.serverState.textContent = '已连接';
+    }
     renderItems();
   } catch (error) {
     elements.serverState.textContent = error.message.includes('令牌') ? '需要令牌' : '连接失败';
     showToast(error.message);
   }
+}
+
+function connectSync() {
+  if (!window.EventSource) {
+    return;
+  }
+
+  const source = new EventSource(withToken('/api/events'));
+  state.sync = source;
+
+  source.addEventListener('open', () => {
+    elements.serverState.textContent = '实时同步';
+  });
+
+  source.addEventListener('items', () => {
+    scheduleLoadItems();
+  });
+
+  source.addEventListener('error', () => {
+    elements.serverState.textContent = '重连中';
+  });
+}
+
+function scheduleLoadItems() {
+  window.clearTimeout(state.reloadTimer);
+  state.reloadTimer = window.setTimeout(() => loadItems(), 120);
 }
 
 async function api(path, options = {}) {

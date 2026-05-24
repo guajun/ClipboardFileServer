@@ -76,9 +76,16 @@ type store struct {
 	indexPath string
 }
 
+type eventBroker struct {
+	mu      sync.Mutex
+	clients map[chan string]struct{}
+	version uint64
+}
+
 type app struct {
-	cfg   config
-	store *store
+	cfg    config
+	store  *store
+	events *eventBroker
 }
 
 type httpError struct {
@@ -112,7 +119,7 @@ func main() {
 		log.Fatalf("load store: %v", err)
 	}
 
-	application := &app{cfg: cfg, store: st}
+	application := &app{cfg: cfg, store: st, events: newEventBroker()}
 	server := &http.Server{
 		Addr:              net.JoinHostPort(cfg.host, strconv.Itoa(cfg.port)),
 		Handler:           application.routes(),
@@ -190,6 +197,8 @@ func (application *app) handleAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch {
+	case r.URL.Path == "/api/events" && r.Method == http.MethodGet:
+		application.streamEvents(w, r)
 	case r.URL.Path == "/api/items" && r.Method == http.MethodGet:
 		writeJSON(w, http.StatusOK, application.store.publicEntries())
 	case r.URL.Path == "/api/text" && r.Method == http.MethodPost:
@@ -218,6 +227,7 @@ func (application *app) createText(w http.ResponseWriter, r *http.Request) {
 	}
 
 	item := application.store.addText(text)
+	application.events.publish("items")
 	writeJSON(w, http.StatusCreated, toPublicEntry(item))
 }
 
@@ -245,6 +255,7 @@ func (application *app) uploadFile(w http.ResponseWriter, r *http.Request) {
 		writeHTTPError(w, err)
 		return
 	}
+	application.events.publish("items")
 	writeJSON(w, http.StatusCreated, toPublicEntry(item))
 }
 
@@ -274,6 +285,7 @@ func (application *app) createJSONItem(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		item := application.store.addText(payload.Text)
+		application.events.publish("items")
 		writeJSON(w, http.StatusCreated, toPublicEntry(item))
 	case "file":
 		data, mimeType, err := decodeDataURL(payload.DataURL)
@@ -293,6 +305,7 @@ func (application *app) createJSONItem(w http.ResponseWriter, r *http.Request) {
 			writeHTTPError(w, err)
 			return
 		}
+		application.events.publish("items")
 		writeJSON(w, http.StatusCreated, toPublicEntry(item))
 	default:
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "kind 只支持 text 或 file"})
@@ -309,7 +322,44 @@ func (application *app) deleteItem(w http.ResponseWriter, r *http.Request) {
 		writeHTTPError(w, err)
 		return
 	}
+	application.events.publish("items")
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+func (application *app) streamEvents(w http.ResponseWriter, r *http.Request) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "实时同步不可用"})
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+
+	client := application.events.subscribe()
+	defer application.events.unsubscribe(client)
+
+	_, _ = fmt.Fprint(w, ": connected\n\n")
+	flusher.Flush()
+
+	heartbeat := time.NewTicker(25 * time.Second)
+	defer heartbeat.Stop()
+
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case message := <-client:
+			_, _ = fmt.Fprintf(w, "event: items\ndata: %s\n\n", message)
+			flusher.Flush()
+		case <-heartbeat.C:
+			_, _ = fmt.Fprint(w, ": heartbeat\n\n")
+			flusher.Flush()
+		}
+	}
 }
 
 func (application *app) handleStoredFile(w http.ResponseWriter, r *http.Request) {
@@ -559,6 +609,38 @@ func (st *store) findFile(id string) (entry, bool) {
 		}
 	}
 	return entry{}, false
+}
+
+func newEventBroker() *eventBroker {
+	return &eventBroker{clients: map[chan string]struct{}{}}
+}
+
+func (broker *eventBroker) subscribe() chan string {
+	client := make(chan string, 8)
+	broker.mu.Lock()
+	broker.clients[client] = struct{}{}
+	broker.mu.Unlock()
+	return client
+}
+
+func (broker *eventBroker) unsubscribe(client chan string) {
+	broker.mu.Lock()
+	delete(broker.clients, client)
+	broker.mu.Unlock()
+	close(client)
+}
+
+func (broker *eventBroker) publish(kind string) {
+	broker.mu.Lock()
+	broker.version++
+	message := fmt.Sprintf(`{"kind":%q,"version":%d}`, kind, broker.version)
+	for client := range broker.clients {
+		select {
+		case client <- message:
+		default:
+		}
+	}
+	broker.mu.Unlock()
 }
 
 func (st *store) persistLocked() error {
